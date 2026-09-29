@@ -1,0 +1,19 @@
+{% extends 'users/base.html' %}
+
+{% block title %}Заказы{% endblock %}
+
+{% block content %}
+<h1>Заказы</h1>
+{% for order in orders %}
+    <div class="product-card">
+        <h2><a href="{% url 'order_detail' order.pk %}">Заказ №{{ order.id }}</a></h2>
+        <p>Пользователь: {{ order.user }}</p>
+        <p>Дата: {{ order.created_at|date:"d.m.Y H:i" }}</p>
+        <p>Сумма: {{ order.total_price }} руб.</p>
+        <p>Оплачен: {% if order.is_paid %}Да{% else %}Нет{% endif %}</p>
+        <p>Статус: {{ order.get_status_display }}</p>
+    </div>
+{% empty %}
+    <p>Заказов пока нет.</p>
+{% endfor %}
+{% endblock %}

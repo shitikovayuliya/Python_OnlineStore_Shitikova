@@ -1,0 +1,21 @@
+{% extends 'users/base.html' %}
+
+{% block title %}Оформление заказа{% endblock %}
+
+{% block content %}
+<h1>Оформление заказа</h1>
+<h2>Ваша корзина</h2>
+<ul>
+    {% for item in cart.items.all %}
+        <li>{{ item.product.name }} × {{ item.quantity }} — {{ item.product.price }} руб.</li>
+    {% endfor %}
+</ul>
+<p><strong>Итого: {{ cart.get_total_price }} руб.</strong></p>
+
+<form method="post" action="{% url 'checkout' %}">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Подтвердить заказ</button>
+</form>
+<a href="{% url 'cart' %}">← Назад в корзину</a>
+{% endblock %}

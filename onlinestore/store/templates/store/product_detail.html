@@ -1,0 +1,17 @@
+{% extends 'users/base.html' %}
+
+{% block title %}{{ product.name }}{% endblock %}
+
+{% block content %}
+<h1>{{ product.name }}</h1>
+{% if product.image %}
+    <img src="{{ product.image.url }}" alt="{{ product.name }}" width="300">
+{% endif %}
+<p>{{ product.description }}</p>
+<p>Цена: {{ product.price }} руб.</p>
+<p>Категория: {{ product.category.name }}</p>
+<a href="{% url 'add_to_cart' %}">Добавить в корзину</a>
+<br><br>
+<a href="{% url 'product_list' %}">← Назад к каталогу</a>
+{% endblock %}
+

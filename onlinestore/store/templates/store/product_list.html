@@ -1,0 +1,18 @@
+{% extends 'users/base.html' %}
+
+{% block title %}Каталог{% endblock %}
+
+{% block content %}
+<h1>Каталог товаров</h1>
+{% for product in products %}
+    <div class="product-card">
+        <h2><a href="{% url 'product_detail' product.pk %}">{{ product.name }}</a></h2>
+        <p>{{ product.description }}</p>
+        <p>Цена: {{ product.price }} руб.</p>
+        <p>Категория: {{ product.category.name }}</p>
+        <a href="{% url 'add_to_cart' %}">Добавить в корзину</a>
+    </div>
+{% empty %}
+    <p>Товаров пока нет.</p>
+{% endfor %}
+{% endblock %}

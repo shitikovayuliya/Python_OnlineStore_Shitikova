@@ -1,0 +1,19 @@
+{% extends 'users/base.html' %}
+
+{% block title %}Главная{% endblock %}
+
+{% block content %}
+<h1>Добро пожаловать в интернет-магазин!</h1>
+<p>Здесь вы можете:</p>
+<ul>
+    <li><a href="{% url 'product_list' %}">Просмотреть каталог товаров</a></li>
+    <li><a href="{% url 'category_list' %}">Просмотреть категории</a></li>
+    {% if user.is_authenticated %}
+        <li><a href="{% url 'cart' %}">Перейти в корзину</a></li>
+        <li><a href="{% url 'order_list' %}">Мои заказы</a></li>
+    {% else %}
+        <li><a href="{% url 'login' %}">Войти</a></li>
+        <li><a href="{% url 'register' %}">Зарегистрироваться</a></li>
+    {% endif %}
+</ul>
+{% endblock %}

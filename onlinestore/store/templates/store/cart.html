@@ -1,0 +1,31 @@
+{% extends 'users/base.html' %}
+
+{% block title %}Корзина{% endblock %}
+
+{% block content %}
+<h1>Корзина</h1>
+{% if items %}
+    <table border="1" cellpadding="8">
+        <tr>
+            <th>Товар</th>
+            <th>Количество</th>
+            <th>Цена</th>
+            <th>Сумма</th>
+        </tr>
+        {% for item in items %}
+            <tr>
+                <td><a href="{% url 'product_detail' item.product.pk %}">{{ item.product.name }}</a></td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.product.price }} руб.</td>
+                <td>{% widthratio item.product.price item.quantity 1 %} руб.</td>
+            </tr>
+        {% endfor %}
+    </table>
+    <p><strong>Итого: {{ total }} руб.</strong></p>
+    <a href="{% url 'checkout' %}">Оформить заказ →</a>
+{% else %}
+    <p>Корзина пуста.</p>
+{% endif %}
+<br><br>
+<a href="{% url 'product_list' %}">← Назад к каталогу</a>
+{% endblock %}

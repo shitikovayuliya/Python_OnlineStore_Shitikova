@@ -1,0 +1,13 @@
+{% extends 'users/base.html' %}
+
+{% block title %}Добавить в корзину{% endblock %}
+
+{% block content %}
+<h1>Добавить в корзину</h1>
+<form method="post" action="{% url 'add_to_cart' %}">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Добавить в корзину</button>
+</form>
+<a href="{% url 'product_list' %}">← Назад к каталогу</a>
+{% endblock %}

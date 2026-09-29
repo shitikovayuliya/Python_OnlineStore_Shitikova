@@ -1,0 +1,15 @@
+{% extends 'users/base.html' %}
+
+{% block title %}Категории{% endblock %}
+
+{% block content %}
+<h1>Категории</h1>
+{% for category in categories %}
+    <div class="product-card">
+        <h2><a href="{% url 'category_detail' category.pk %}">{{ category.name }}</a></h2>
+        <p>{{ category.description }}</p>
+    </div>
+{% empty %}
+    <p>Категорий пока нет.</p>
+{% endfor %}
+{% endblock %}
