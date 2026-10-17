@@ -251,3 +251,120 @@ class CheckoutViewTestCase(TestCase):
         })
         self.cart.refresh_from_db()
         self.assertEqual(self.cart.items.count(), 0)
+
+    def test_checkout_insufficient_stock_shows_error(self):
+        """При нехватке товара на складе — ошибка, заказ не создаётся."""
+        self.stock.quantity = 1
+        self.stock.save()
+        self.cart.items.update(quantity=5)
+
+        response = self.client.post(reverse('checkout'), {
+            'name': 'Иван',
+            'address': 'ул. Пушкина',
+            'email': 'test@example.com',
+            'cart': self.cart.pk
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Order.objects.count(), 0)
+        self.stock.refresh_from_db()
+        self.assertEqual(self.stock.quantity, 1)
+
+
+# ===== ТЕСТЫ: ЗАЩИТА ЗАКАЗОВ =====
+
+@override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
+class OrderListViewTestCase(TestCase):
+    """Тесты на доступ к order_list и order_detail."""
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(username='user1', password='pass123')
+        self.other_user = User.objects.create_user(username='user2', password='pass123')
+        self.category = Category.objects.create(name='Электроника')
+        self.product = Product.objects.create(
+            name='iPhone', description='Смартфон', price='999.99',
+            image=get_test_image(), category=self.category
+        )
+        self.stock = StockBalance.objects.create(product=self.product, quantity=10)
+
+        self.cart1 = Cart.objects.create(user=self.user)
+        self.cart1.add_item(self.product, quantity=1)
+        self.order1 = create_order_from_cart(self.cart1)
+
+        self.cart2 = Cart.objects.create(user=self.other_user)
+        self.cart2.add_item(self.product, quantity=2)
+        self.order2 = create_order_from_cart(self.cart2)
+
+    def test_order_list_requires_login(self):
+        self.client.logout()
+        response = self.client.get(reverse('order_list'))
+        self.assertEqual(response.status_code, 302)
+
+    def test_order_list_shows_only_user_orders(self):
+        self.client.login(username='user1', password='pass123')
+        response = self.client.get(reverse('order_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'Заказ №{self.order1.pk}')
+        self.assertNotContains(response, f'Заказ №{self.order2.pk}')
+
+    def test_order_detail_requires_login(self):
+        self.client.logout()
+        response = self.client.get(reverse('order_detail', args=[self.order1.pk]))
+        self.assertEqual(response.status_code, 302)
+
+    def test_order_detail_shows_own_order(self):
+        self.client.login(username='user1', password='pass123')
+        response = self.client.get(reverse('order_detail', args=[self.order1.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'Заказ №{self.order1.pk}')
+
+    def test_order_detail_denies_other_user_order(self):
+        self.client.login(username='user1', password='pass123')
+        response = self.client.get(reverse('order_detail', args=[self.order2.pk]))
+        self.assertEqual(response.status_code, 302)
+
+
+# ===== ТЕСТЫ: ADD_TO_CART С ПРОВЕРКОЙ ОСТАТКА =====
+
+@override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
+class AddToCartStockTestCase(TestCase):
+    """Тесты проверки остатка при добавлении в корзину."""
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(username='testuser', password='testpass123')
+        self.client.login(username='testuser', password='testpass123')
+        self.category = Category.objects.create(name='Электроника')
+        self.product = Product.objects.create(
+            name='iPhone', description='Смартфон', price='999.99',
+            image=get_test_image(), category=self.category
+        )
+        self.stock = StockBalance.objects.create(product=self.product, quantity=3)
+
+    def test_add_to_cart_exceeds_stock_shows_error(self):
+        response = self.client.post(reverse('add_to_cart'), {
+            'product': self.product.pk,
+            'quantity': 10
+        })
+        self.assertEqual(response.status_code, 200)
+        # Корзина не должна содержать добавленных товаров
+        self.assertFalse(CartItem.objects.filter(
+            cart__user=self.user, product=self.product
+        ).exists())
+
+    def test_add_to_cart_equals_stock_allowed(self):
+        response = self.client.post(reverse('add_to_cart'), {
+            'product': self.product.pk,
+            'quantity': 3
+        })
+        self.assertEqual(response.status_code, 302)
+        cart = Cart.objects.get(user=self.user)
+        self.assertEqual(cart.items.first().quantity, 3)
+
+    def test_add_to_cart_without_login_redirects(self):
+        self.client.logout()
+        response = self.client.post(reverse('add_to_cart'), {
+            'product': self.product.pk,
+            'quantity': 1
+        })
+        self.assertEqual(response.status_code, 302)

@@ -1,29 +1,57 @@
 
+import os
 from pathlib import Path
-import psycopg2
 
+# Корневая директория проекта
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
+def get_env_variable(var_name, default=None):
+    """
+    Получает переменную окружения.
+    Если переменная не установлена — выбрасывает ValueError.
+    """
+    value = os.environ.get(var_name, default)
+    if value is None:
+        raise ValueError(f'Please set the {var_name} environment variable')
+    return value
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-m(03*y)szdx^csb=knm#7(kjj2%lpi=gvkv4n#8gq!wkw4v9f@'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# =============================================================================
+# Безопасность и режим работы
+# =============================================================================
 
-ALLOWED_HOSTS = []
+# Секретный ключ для криптографических примитивов Django
+# !!! Никогда не коммитьте реальный ключ в репозиторий !!!
+SECRET_KEY = get_env_variable('SECRET_KEY')
+
+# Режим отладки: True для разработки, False для продакшена
+# При DEBUG=False включаются дополнительные проверки безопасности
+DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
+
+# Список разрешённых хостов для подключения
+# В продакшене укажите доменное имя вашего сайта
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in get_env_variable('ALLOWED_HOSTS', '').split(',')
+    if host.strip()
+]
 
 
-# Application definition
+# =============================================================================
+# Приложения Django
+# =============================================================================
 
 INSTALLED_APPS = [
-    'users',
-    'store',
+    # Собственные приложения
+    'users',           # Кастомная модель пользователя и аутентификация
+    'store',           # Каталог, корзина, заказы, остатки
+
+    # Улучшенная админ-панель
     'admin_interface',
     'colorfield',
+
+    # Стандартные приложения Django
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -34,22 +62,30 @@ INSTALLED_APPS = [
 
 
 
+# =============================================================================
+# Middleware — обработка запросов/ответов
+# =============================================================================
+
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.security.SecurityMiddleware',     # Безопасность
+    'django.contrib.sessions.middleware.SessionMiddleware',  # Сессии
+    'django.middleware.common.CommonMiddleware',         # URL-фильтрация
+    'django.middleware.csrf.CsrfViewMiddleware',         # CSRF-защита
+    'django.contrib.auth.middleware.AuthenticationMiddleware',  # Аутентификация
+    'django.contrib.messages.middleware.MessageMiddleware',     # Сообщения
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',   # Защита от clickjacking
 ]
 
-ROOT_URLCONF = 'onlinestore.urls'
+ROOT_URLCONF = 'onlinestore.urls'  # Корневой URL-конфиг
+
+# =============================================================================
+# Шаблоны Django
+# =============================================================================
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [],  # Директории с шаблонами (поиск по APP_DIRS)
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -62,20 +98,23 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'onlinestore.wsgi.application'
+WSGI_APPLICATION = 'onlinestore.wsgi.application'  # WSGI-entrypoint
 
 
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+# =============================================================================
+# База данных
+# =============================================================================
+# PostgreSQL: параметры берутся из переменных окружения (.env)
+# В Docker-окружении HOST='db' (имя сервиса в docker-compose)
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'mydatabase',
-        'USER': 'myuser',
-        'PASSWORD': 'mypassword',
-        'HOST': 'db',
-        'PORT': '5432',
+        'NAME': get_env_variable('DB_NAME', 'mydatabase'),
+        'USER': get_env_variable('DB_USER', 'myuser'),
+        'PASSWORD': get_env_variable('DB_PASSWORD', 'mypassword'),
+        'HOST': get_env_variable('DB_HOST', 'db'),
+        'PORT': get_env_variable('DB_PORT', '5432'),
     }
 }
 
@@ -83,50 +122,46 @@ DATABASES = {
 
 
 
-# Password validationbrew services list
-
-# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
+# =============================================================================
+# Валидация паролей
+# =============================================================================
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},  # Не слишком похож на пользователя
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},              # Минимальная длина
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},             # Не распространённый пароль
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},            # Не только цифры
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/4.2/topics/i18n/
+# =============================================================================
+# Интернационализация
+# =============================================================================
 
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
-USE_I18N = True
-
-USE_TZ = True
+LANGUAGE_CODE = 'en-us'   # Язык интерфейса
+TIME_ZONE = 'UTC'         # Часовой пояс
+USE_I18N = True           # Включить локализацию
+USE_TZ = True             # Временные метки в UTC
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
+# =============================================================================
+# Статические файлы (CSS, JS, изображения)
+# =============================================================================
 
-STATIC_URL = 'static/'
-STATIC_ROOT = 'static/'
+STATIC_URL = 'static/'    # URL-путь к статике
+STATIC_ROOT = 'static/'   # Директория для collectstatic
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
+# =============================================================================
+# Дополнительные настройки
+# =============================================================================
+
+# Поле автоинкремента по умолчанию
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Кастомная модель пользователя (наследует AbstractUser)
 AUTH_USER_MODEL = 'users.User'
 
+# Куда перенаправлять после входа/выхода
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
